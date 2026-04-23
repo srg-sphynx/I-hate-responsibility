@@ -349,3 +349,23 @@ function initConsent() {
 
 init();
 initConsent();
+
+// ============================================
+// RATE LIMIT BANNER
+// ============================================
+(function initRateLimitBanner() {
+  const banner = document.getElementById('rate-limit-banner');
+  const closeBtn = document.getElementById('rate-limit-close');
+  if (!banner || !closeBtn) return;
+
+  // Check if already dismissed this session
+  if (sessionStorage.getItem('ihr-rate-limit-dismissed')) {
+    banner.classList.add('dismissed');
+    return;
+  }
+
+  closeBtn.addEventListener('click', () => {
+    banner.classList.add('dismissed');
+    sessionStorage.setItem('ihr-rate-limit-dismissed', '1');
+  });
+})();
