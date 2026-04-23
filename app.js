@@ -217,6 +217,12 @@ async function handleAscii() {
   const text = typeof data === 'string' ? data : (data.ascii || data.art || JSON.stringify(data,null,2));
   asciiArt.textContent = text;
   if (copyAsciiBtn) copyAsciiBtn.style.display = 'inline-flex';
+
+  // Extract a readable line from the ASCII art for history
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.match(/^[─│┌┐└┘╔╗╚╝═║\-+|*#=_\\\/\[\]<>^]+$/));
+  const blameText = lines[0] || `ASCII Art (${selectedAsciiStyle})`;
+  const ts = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  addToHistory({ blame: `🎨 ${blameText}`, category: `ASCII · ${selectedAsciiStyle.toUpperCase()}`, severityEmoji: '🎨', time: ts });
 }
 
 function sevEmoji(s) { return {minor:'🟢',moderate:'🟡',catastrophic:'🔴'}[s]||'🟠'; }
