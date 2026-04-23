@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>I Hate Responsibility — Professional Blame Generator</title>
-  <meta name="description" content="Generate hilarious, professional excuses to avoid responsibility with the click of a button. Powered by Blame-as-a-Service.">
+  <meta name="description" content="Generate hilarious, professional excuses to avoid responsibility. Filter by category, severity, get ASCII art, or spin the Blame Roulette. Powered by Blame-as-a-Service.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <!-- Animated background particles -->
@@ -24,49 +24,109 @@
       <p class="tagline">The world's most sophisticated excuse generator.</p>
       <div class="counter-badge" id="counter-badge">
         <span class="counter-dot"></span>
-        <span id="counter-text">0 dodged responsibilities</span>
+        <span id="counter-text">0 dodged</span>
       </div>
     </header>
 
+    <!-- Mode Selector Tabs -->
+    <nav class="mode-tabs" id="mode-tabs">
+      <button class="mode-tab active" data-mode="random" type="button">
+        <span class="tab-icon">🎲</span>
+        <span class="tab-label">Random</span>
+      </button>
+      <button class="mode-tab" data-mode="category" type="button">
+        <span class="tab-icon">🗂️</span>
+        <span class="tab-label">Category</span>
+      </button>
+      <button class="mode-tab" data-mode="severity" type="button">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Severity</span>
+      </button>
+      <button class="mode-tab" data-mode="roulette" type="button">
+        <span class="tab-icon">🎰</span>
+        <span class="tab-label">Roulette</span>
+      </button>
+      <button class="mode-tab" data-mode="ascii" type="button">
+        <span class="tab-icon">🎨</span>
+        <span class="tab-label">ASCII Art</span>
+      </button>
+    </nav>
+
+    <!-- Options Panel (shown for category/severity/roulette/ascii modes) -->
+    <div class="options-panel" id="options-panel" style="display:none;">
+      <!-- Category Picker -->
+      <div class="option-group" id="opt-category" style="display:none;">
+        <p class="option-label">Pick a category:</p>
+        <div class="chip-grid" id="category-chips"></div>
+      </div>
+      <!-- Severity Picker -->
+      <div class="option-group" id="opt-severity" style="display:none;">
+        <p class="option-label">Pick a severity level:</p>
+        <div class="chip-grid" id="severity-chips">
+          <button class="chip active" data-severity="minor">🟢 Minor</button>
+          <button class="chip" data-severity="moderate">🟡 Moderate</button>
+          <button class="chip" data-severity="catastrophic">🔴 Catastrophic</button>
+        </div>
+      </div>
+      <!-- Roulette Count -->
+      <div class="option-group" id="opt-roulette" style="display:none;">
+        <p class="option-label">How many excuses?</p>
+        <div class="roulette-slider-group">
+          <input type="range" id="roulette-count" min="2" max="10" value="5" class="roulette-slider">
+          <span class="roulette-count-label" id="roulette-count-label">5</span>
+        </div>
+      </div>
+      <!-- ASCII Style -->
+      <div class="option-group" id="opt-ascii" style="display:none;">
+        <p class="option-label">Pick an ASCII art style:</p>
+        <div class="chip-grid" id="ascii-chips">
+          <button class="chip active" data-style="box">📦 Box</button>
+          <button class="chip" data-style="banner">🏴 Banner</button>
+          <button class="chip" data-style="simple">📝 Simple</button>
+          <button class="chip" data-style="dramatic">🎭 Dramatic</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Main CTA Section -->
     <section class="cta-section" id="cta-section">
-      <!-- Current Blame display -->
+      <!-- Single Blame Display -->
       <div class="blame-display" id="blame-display">
         <div class="blame-display-inner" id="blame-display-inner">
           <p class="blame-label">YOUR LATEST EXCUSE</p>
           <p class="blame-reason" id="blame-reason">Press the button to seamlessly avoid responsibility.</p>
-          
-          <div class="blame-meta-grid" id="blame-meta-grid" style="display: none;">
-            <div class="meta-item">
-              <span class="meta-title">CATEGORY</span>
-              <span class="meta-value" id="meta-category">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-title">SEVERITY</span>
-              <span class="meta-value" id="meta-severity">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-title">QUALITY</span>
-              <span class="meta-value" id="meta-quality">-</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-title">BELIEVABILITY</span>
-              <span class="meta-value" id="meta-believability">-</span>
-            </div>
+          <div class="blame-meta-grid" id="blame-meta-grid" style="display:none;">
+            <div class="meta-item"><span class="meta-title">CATEGORY</span><span class="meta-value" id="meta-category">—</span></div>
+            <div class="meta-item"><span class="meta-title">SEVERITY</span><span class="meta-value" id="meta-severity">—</span></div>
+            <div class="meta-item"><span class="meta-title">QUALITY</span><span class="meta-value" id="meta-quality">—</span></div>
+            <div class="meta-item"><span class="meta-title">BELIEVABILITY</span><span class="meta-value" id="meta-believability">—</span></div>
           </div>
-
           <button class="copy-btn copy-btn-main" id="copy-main-btn" type="button" style="display:none;" title="Copy to clipboard">
-            <span class="copy-icon">📋</span>
-            <span class="copy-label">Copy</span>
+            <span class="copy-icon">📋</span><span class="copy-label">Copy</span>
           </button>
         </div>
       </div>
 
+      <!-- ASCII Display (hidden by default) -->
+      <div class="ascii-display" id="ascii-display" style="display:none;">
+        <p class="blame-label">ASCII ART EXCUSE</p>
+        <pre class="ascii-art" id="ascii-art"></pre>
+        <button class="copy-btn copy-btn-main" id="copy-ascii-btn" type="button" style="display:none;" title="Copy ASCII art">
+          <span class="copy-icon">📋</span><span class="copy-label">Copy</span>
+        </button>
+      </div>
+
+      <!-- Roulette Display (hidden by default) -->
+      <div class="roulette-display" id="roulette-display" style="display:none;">
+        <p class="blame-label">BLAME ROULETTE RESULTS</p>
+        <div class="roulette-results" id="roulette-results"></div>
+      </div>
+
       <!-- The Big Button -->
       <button class="big-blame-btn" id="big-blame-btn" type="button">
-        <span class="btn-emoji">🏃💨</span>
-        <span class="btn-text">IT WASN'T ME</span>
-        <span class="btn-subtitle">generate excuse</span>
+        <span class="btn-emoji" id="btn-emoji">🏃💨</span>
+        <span class="btn-text" id="btn-text">IT WASN'T ME</span>
+        <span class="btn-subtitle" id="btn-subtitle">generate excuse</span>
         <div class="btn-ripple" id="btn-ripple"></div>
       </button>
 
@@ -92,7 +152,7 @@
     <footer class="site-footer" id="site-footer">
       <p>🤷 I Hate Responsibility — Open source, privacy-first, blame-forward.</p>
       <div class="visitor-badge">
-        <img src="https://api.visitorbadge.io/api/visitors?path=srg-sphynx.github.io%2FI-hate-responsibility&label=VISITORS&labelColor=%230f172a&countColor=%233b82f6" alt="Visitor Count" id="visitor-badge-img" />
+        <img src="https://api.visitorbadge.io/api/visitors?path=srg-sphynx.github.io%2FI-hate-responsibility&label=VISITORS&labelColor=%230a0a0f&countColor=%233b82f6" alt="Visitor Count" id="visitor-badge-img" />
       </div>
       <div class="footer-links">
         <a href="privacy.html">Privacy Policy</a>
@@ -121,6 +181,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

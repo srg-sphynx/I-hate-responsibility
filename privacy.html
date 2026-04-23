@@ -3,37 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - I Hate Responsibility</title>
+  <title>Privacy Policy — I Hate Responsibility</title>
+  <meta name="description" content="Privacy Policy for the I Hate Responsibility web app.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #0f172a;
-      color: #f8fafc;
-      line-height: 1.6;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    h1 { color: #3b82f6; }
-    a { color: #60a5fa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .back-link { display: inline-block; margin-top: 2rem; font-weight: 600; }
+    :root { --bg:#0a0a0f; --card:#1a1a2e; --text:#f0f0f5; --muted:#8888a8; --accent:#3b82f6; --border:rgba(255,255,255,.06); }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
+    .container{max-width:680px;margin:0 auto;padding:3rem 1.5rem}
+    h1{font-size:2rem;margin-bottom:.5rem;background:linear-gradient(135deg,#3b82f6,#60a5fa,#93c5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .subtitle{color:var(--muted);font-size:.85rem;margin-bottom:2.5rem;font-family:'JetBrains Mono',monospace}
+    h2{font-size:1.15rem;margin:2rem 0 .75rem;color:var(--accent);letter-spacing:-.3px}
+    p,li{color:var(--muted);font-size:.95rem;margin-bottom:.75rem}
+    ul{padding-left:1.25rem;margin-bottom:1rem}
+    li{margin-bottom:.4rem}
+    strong{color:var(--text)}
+    code{font-family:'JetBrains Mono',monospace;font-size:.85rem;background:var(--card);padding:2px 6px;border-radius:4px;color:var(--accent)}
+    a{color:var(--accent);text-decoration:none;transition:color .2s}
+    a:hover{color:#93c5fd;text-decoration:underline}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin:1.5rem 0}
+    .card h3{font-size:.95rem;margin-bottom:.5rem;color:var(--text)}
+    .card p{font-size:.85rem;margin-bottom:0}
+    .back{display:inline-flex;align-items:center;gap:.5rem;margin-top:2.5rem;padding:.6rem 1.2rem;background:var(--card);border:1px solid var(--border);border-radius:999px;font-weight:600;font-size:.85rem;color:var(--text);transition:all .2s}
+    .back:hover{border-color:var(--accent);background:rgba(59,130,246,.08);text-decoration:none}
+    .divider{border:none;border-top:1px solid var(--border);margin:2rem 0}
   </style>
 </head>
 <body>
-  <h1>Privacy Policy</h1>
-  <p>Last updated: April 2026</p>
-  
-  <h2>1. Data Collection & Storage</h2>
-  <p><strong>I Hate Responsibility</strong> does not collect, transmit, or sell any of your personal data. We don't have servers, databases, or analytics tracking you.</p>
-  <p>Your excuse history is saved entirely on your device using a technology called <code>localStorage</code>. This means the data lives in your browser and never touches our non-existent servers.</p>
+  <div class="container">
+    <h1>🔒 Privacy Policy</h1>
+    <p class="subtitle">Last updated: April 2026</p>
 
-  <h2>2. API Usage</h2>
-  <p>When you click the button to generate an excuse, a request is sent to the <a href="https://github.com/sbmagar13/blame-as-a-service" target="_blank" rel="noopener">Blame as a Service API</a>. Please refer to their repository for any of their API usage policies.</p>
+    <p><strong>I Hate Responsibility</strong> is a free, open-source web application that generates humorous blame excuses. We take your privacy seriously — which is ironic, given the app's theme.</p>
 
-  <h2>3. Clearing Your Data</h2>
-  <p>You can clear your history at any time by clicking the "Clear All" button in the app, or by clearing your browser's site data/cookies. You can also decline the initial consent banner, which will prevent any data from being saved locally.</p>
+    <h2>1. Data We Collect</h2>
+    <div class="card">
+      <h3>Short answer: Nothing.</h3>
+      <p>We have no servers, no databases, no analytics, no cookies for tracking, and no interest in your personal information.</p>
+    </div>
 
-  <a href="index.html" class="back-link">← Back to App</a>
+    <h2>2. Local Storage</h2>
+    <p>When you accept the consent banner, we store your <strong>excuse history</strong> in your browser's <code>localStorage</code>. This data:</p>
+    <ul>
+      <li>Lives <strong>entirely on your device</strong></li>
+      <li>Is <strong>never transmitted</strong> to any server</li>
+      <li>Can be <strong>deleted at any time</strong> using the "Clear All" button or your browser settings</li>
+      <li>Contains only the generated excuse text, category, and timestamp</li>
+    </ul>
+    <p>If you decline the consent banner, no data is stored whatsoever.</p>
+
+    <h2>3. Third-Party API</h2>
+    <p>When you generate an excuse, a network request is sent to the <a href="https://github.com/sbmagar13/blame-as-a-service" target="_blank" rel="noopener">Blame as a Service API</a>. We do not control this API. Your IP address may be visible to their server as part of standard HTTP communication. Please refer to their repository for their policies.</p>
+
+    <h2>4. Visitor Badge</h2>
+    <p>The footer contains a visitor counter badge provided by <a href="https://visitorbadge.io" target="_blank" rel="noopener">visitorbadge.io</a>. This is an external service that counts page visits. It does not collect personal data or use cookies. See their privacy policy for details.</p>
+
+    <h2>5. CORS Proxy</h2>
+    <p>If the API cannot be reached directly due to browser security restrictions (CORS), a proxy service (<code>corsproxy.io</code>) may be used to relay the request. This proxy only forwards the API request and response — no personal data is sent through it.</p>
+
+    <hr class="divider">
+
+    <h2>6. Your Rights</h2>
+    <p>You have full control over your data at all times:</p>
+    <ul>
+      <li><strong>View:</strong> Your history is visible in the app's "Hall of Excuses"</li>
+      <li><strong>Delete:</strong> Click "Clear All" or clear your browser's site data</li>
+      <li><strong>Prevent:</strong> Decline the consent banner to opt out entirely</li>
+    </ul>
+
+    <h2>7. Changes</h2>
+    <p>If this policy is updated, the "Last updated" date above will change. Since the app has no user accounts or contact information, we cannot notify you directly — but the source code and this page are always available on <a href="https://github.com/srg-sphynx/I-hate-responsibility" target="_blank" rel="noopener">GitHub</a>.</p>
+
+    <a href="index.html" class="back">← Back to App</a>
+  </div>
 </body>
 </html>

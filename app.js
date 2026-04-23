@@ -1,500 +1,333 @@
 // ============================================
-// I Hate Responsibility — App Logic
+// I Hate Responsibility — App Logic v3
 // ============================================
 
 const API_BASE = 'https://baas.budhathokisagar.com.np';
-const API_PATH_RICH = '/blame/rich';
-const API_PATH_SIMPLE = '/blame';
+const PROXY = (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`;
 
-// CORS proxy strategies (tried in order)
-const CORS_STRATEGIES = [
-  (url) => url,                                                    // Direct (no proxy)
-  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,     // corsproxy.io
-  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, // allorigins
-];
+const CATEGORY_META = {
+  cosmic:'🌌', technical:'💻', management:'📋', team:'👥',
+  environmental:'🌿', legacy:'📜', user:'👤', ai_modern:'🤖',
+  cloud:'☁️', security:'🔒'
+};
 
-// DOM Elements
-const bigBlameBtn = document.getElementById('big-blame-btn');
+// DOM refs
+const bigBtn = document.getElementById('big-blame-btn');
+const btnEmoji = document.getElementById('btn-emoji');
+const btnText = document.getElementById('btn-text');
+const btnSub = document.getElementById('btn-subtitle');
 const blameReason = document.getElementById('blame-reason');
 const blameDisplay = document.getElementById('blame-display');
 const metaGrid = document.getElementById('blame-meta-grid');
-const metaCategory = document.getElementById('meta-category');
-const metaSeverity = document.getElementById('meta-severity');
-const metaQuality = document.getElementById('meta-quality');
-const metaBelievability = document.getElementById('meta-believability');
-
+const metaCat = document.getElementById('meta-category');
+const metaSev = document.getElementById('meta-severity');
+const metaQual = document.getElementById('meta-quality');
+const metaBel = document.getElementById('meta-believability');
+const asciiDisplay = document.getElementById('ascii-display');
+const asciiArt = document.getElementById('ascii-art');
+const rouletteDisplay = document.getElementById('roulette-display');
+const rouletteResults = document.getElementById('roulette-results');
 const historyList = document.getElementById('history-list');
 const historyEmpty = document.getElementById('history-empty');
 const clearBtn = document.getElementById('clear-btn');
 const counterText = document.getElementById('counter-text');
 const copyMainBtn = document.getElementById('copy-main-btn');
+const copyAsciiBtn = document.getElementById('copy-ascii-btn');
+const optionsPanel = document.getElementById('options-panel');
+const rouletteSlider = document.getElementById('roulette-count');
+const rouletteLabel = document.getElementById('roulette-count-label');
 
-// State
-let history = [];
-let totalCount = 0;
-let isLoading = false;
-let workingStrategyIdx = 0; // Cache whichever proxy strategy works
+let history = [], totalCount = 0, isLoading = false, currentMode = 'random';
+let selectedCategory = 'cosmic', selectedSeverity = 'minor', selectedAsciiStyle = 'box';
 
 // ============================================
-// INITIALIZATION
+// INIT
 // ============================================
 function init() {
-  // Load history from localStorage
-  const saved = localStorage.getItem('ihateresponsibility-history');
-  if (saved) {
-    try {
-      history = JSON.parse(saved);
-      totalCount = history.length;
-      renderHistory();
-      updateCounter();
-    } catch (e) {
-      history = [];
-    }
-  }
-
-  // Create background particles
+  const saved = localStorage.getItem('ihr-history');
+  if (saved) { try { history = JSON.parse(saved); totalCount = history.length; renderHistory(); updateCounter(); } catch(e) { history=[]; } }
   createParticles();
-
-  // Event listeners
-  bigBlameBtn.addEventListener('click', handleBlameClick);
+  bigBtn.addEventListener('click', handleGenerate);
   clearBtn.addEventListener('click', handleClear);
+  if (copyMainBtn) copyMainBtn.addEventListener('click', () => { const t = blameReason.textContent; if (t && !t.startsWith('Press the')) copyToClipboard(t, copyMainBtn); });
+  if (copyAsciiBtn) copyAsciiBtn.addEventListener('click', () => { if (asciiArt.textContent) copyToClipboard(asciiArt.textContent, copyAsciiBtn); });
+  if (rouletteSlider) rouletteSlider.addEventListener('input', () => { rouletteLabel.textContent = rouletteSlider.value; });
 
-  // Main copy button
-  if (copyMainBtn) {
-    copyMainBtn.addEventListener('click', () => {
-      const reason = blameReason.textContent;
-      if (reason && reason !== 'Press the button to seamlessly avoid responsibility.') {
-        copyToClipboard(reason, copyMainBtn);
-      }
+  // Mode tabs
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchMode(tab.dataset.mode));
+  });
+
+  // Build category chips
+  buildCategoryChips();
+
+  // Chip click delegation
+  document.querySelectorAll('.chip-grid').forEach(grid => {
+    grid.addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      grid.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      if (chip.dataset.severity) selectedSeverity = chip.dataset.severity;
+      if (chip.dataset.category) selectedCategory = chip.dataset.category;
+      if (chip.dataset.style) selectedAsciiStyle = chip.dataset.style;
     });
-  }
+  });
+}
+
+function buildCategoryChips() {
+  const container = document.getElementById('category-chips');
+  if (!container) return;
+  Object.entries(CATEGORY_META).forEach(([key, emoji], i) => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (i === 0 ? ' active' : '');
+    btn.dataset.category = key;
+    btn.textContent = `${emoji} ${key.replace('_',' ')}`;
+    container.appendChild(btn);
+  });
 }
 
 // ============================================
-// API CALL (with CORS proxy fallback)
+// MODE SWITCHING
 // ============================================
-async function fetchBlame() {
-  // Try the rich endpoint first, then fall back to simple
-  const endpoints = [
-    API_BASE + API_PATH_RICH,
-    API_BASE + API_PATH_SIMPLE,
-  ];
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
 
-  // Start from whichever strategy worked last time
-  for (let attempt = 0; attempt < CORS_STRATEGIES.length; attempt++) {
-    const stratIdx = (workingStrategyIdx + attempt) % CORS_STRATEGIES.length;
-    const strategy = CORS_STRATEGIES[stratIdx];
+  // Show/hide option groups
+  const groups = { category:'opt-category', severity:'opt-severity', roulette:'opt-roulette', ascii:'opt-ascii' };
+  const hasOptions = ['category','severity','roulette','ascii'].includes(mode);
+  optionsPanel.style.display = hasOptions ? 'block' : 'none';
+  Object.values(groups).forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+  if (groups[mode]) { const el = document.getElementById(groups[mode]); if(el) el.style.display = 'block'; }
 
-    for (const endpoint of endpoints) {
-      try {
-        const url = strategy(endpoint);
-        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!response.ok) continue;
-        const data = await response.json();
-        if (data.blame) {
-          workingStrategyIdx = stratIdx; // Remember what worked
-          // Normalize: simple endpoint has string severity, rich has object
-          if (typeof data.severity === 'string') {
-            data.severity = { level: data.severity, emoji: severityEmoji(data.severity), name: data.severity.toUpperCase() };
-            data.quality_score = data.quality_score || Math.floor(Math.random() * 4) + 6;
-            data.believability = data.believability || Math.floor(Math.random() * 5) + 5;
-          }
-          return data;
-        }
-      } catch (_) {
-        // Try next strategy
-      }
-    }
-  }
+  // Show/hide display areas
+  blameDisplay.style.display = (mode === 'ascii' || mode === 'roulette') ? 'none' : 'block';
+  asciiDisplay.style.display = mode === 'ascii' ? 'block' : 'none';
+  rouletteDisplay.style.display = mode === 'roulette' ? 'block' : 'none';
 
-  throw new Error('All API strategies failed');
+  // Update button text
+  const labels = { random:['🏃💨','IT WASN\'T ME','generate excuse'], category:['🗂️','BLAME BY CATEGORY','pick & generate'], severity:['📊','BLAME BY SEVERITY','pick & generate'], roulette:['🎰','SPIN THE ROULETTE','multiple excuses'], ascii:['🎨','GET ASCII ART','generate art'] };
+  const [em, txt, sub] = labels[mode] || labels.random;
+  btnEmoji.textContent = em; btnText.textContent = txt; btnSub.textContent = sub;
 }
 
-function severityEmoji(level) {
-  const map = { minor: '🟢', moderate: '🟡', catastrophic: '🔴' };
-  return map[level] || '🟠';
+// ============================================
+// API FETCH (with CORS proxy fallback)
+// ============================================
+async function apiFetch(path) {
+  // Try direct first, then proxy
+  for (const urlFn of [u => u, PROXY]) {
+    try {
+      const r = await fetch(urlFn(API_BASE + path), { signal: AbortSignal.timeout(8000) });
+      if (r.ok) { const ct = r.headers.get('content-type') || ''; return ct.includes('json') ? await r.json() : await r.text(); }
+    } catch(_) {}
+  }
+  throw new Error('API unreachable');
 }
 
 // ============================================
 // MAIN HANDLER
 // ============================================
-async function handleBlameClick(e) {
+async function handleGenerate(e) {
   if (isLoading) return;
   isLoading = true;
-
-  // Ripple effect
   createRipple(e);
-
-  // Button loading state
-  bigBlameBtn.classList.add('loading');
-  const btnEmoji = bigBlameBtn.querySelector('.btn-emoji');
+  bigBtn.classList.add('loading');
   const origEmoji = btnEmoji.textContent;
   btnEmoji.textContent = '⏳';
 
-  // Fade out current reason
-  blameReason.classList.add('loading');
-
   try {
-    const data = await fetchBlame();
-    const timestamp = new Date().toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
-
-    // Update display
-    blameReason.textContent = data.blame;
-    blameReason.classList.remove('loading');
-    blameReason.classList.remove('pop-in');
-    
-    // Format category nicely
-    const categoryFormatted = data.category.replace('_', ' ').toUpperCase();
-    metaCategory.textContent = categoryFormatted;
-    
-    // Format severity
-    metaSeverity.textContent = `${data.severity.emoji} ${data.severity.name}`;
-    
-    metaQuality.textContent = `${data.quality_score}/10`;
-    metaBelievability.textContent = `${data.believability}/10`;
-    
-    metaGrid.style.display = 'grid';
-
-    // Force reflow
-    void blameReason.offsetWidth;
-    blameReason.classList.add('pop-in');
-
-    blameDisplay.classList.add('active');
-
-    // Show copy button
-    if (copyMainBtn) {
-      copyMainBtn.style.display = 'inline-flex';
-    }
-
-    // Screen shake
+    if (currentMode === 'roulette') await handleRoulette();
+    else if (currentMode === 'ascii') await handleAscii();
+    else await handleSingle();
     document.body.classList.add('shake');
     setTimeout(() => document.body.classList.remove('shake'), 500);
-
-    // Emoji burst
     createEmojiBurst();
-
-    // Add to history
-    const entry = {
-      id: Date.now(),
-      blame: data.blame,
-      category: categoryFormatted,
-      severityEmoji: data.severity.emoji,
-      time: timestamp,
-    };
-    history.unshift(entry);
-    totalCount++;
-
-    // Save & render
-    saveHistory();
-    renderHistory();
-    updateCounter();
-
-  } catch (err) {
-    blameReason.textContent = 'The API also avoids responsibility. Try again? 😅';
-    blameReason.classList.remove('loading');
-    blameReason.classList.remove('pop-in');
-    void blameReason.offsetWidth;
-    blameReason.classList.add('pop-in');
-    
-    metaGrid.style.display = 'none';
-
+  } catch(err) {
     showToast('⚠️ API failed to take the blame. Try again!');
+    if (currentMode !== 'roulette' && currentMode !== 'ascii') {
+      blameReason.textContent = 'The API also avoids responsibility. Try again? 😅';
+      blameReason.classList.remove('loading','pop-in');
+      void blameReason.offsetWidth;
+      blameReason.classList.add('pop-in');
+    }
   } finally {
     isLoading = false;
-    bigBlameBtn.classList.remove('loading');
+    bigBtn.classList.remove('loading');
     btnEmoji.textContent = origEmoji;
   }
 }
 
+async function handleSingle() {
+  blameReason.classList.add('loading');
+  let path = '/blame/rich';
+  if (currentMode === 'category') path = `/blame/category/${selectedCategory}`;
+  else if (currentMode === 'severity') path = `/blame/severity/${selectedSeverity}`;
+
+  const data = await apiFetch(path);
+  const ts = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+
+  blameReason.textContent = data.blame;
+  blameReason.classList.remove('loading','pop-in');
+  void blameReason.offsetWidth;
+  blameReason.classList.add('pop-in');
+  blameDisplay.classList.add('active');
+
+  // Show meta
+  const cat = (data.category||'unknown').replace(/_/g,' ').toUpperCase();
+  const sevObj = typeof data.severity === 'object' ? data.severity : {emoji:sevEmoji(data.severity),name:(data.severity||'').toUpperCase()};
+  metaCat.textContent = `${CATEGORY_META[data.category]||'❓'} ${cat}`;
+  metaSev.textContent = `${sevObj.emoji} ${sevObj.name}`;
+  metaQual.textContent = data.quality_score ? `${data.quality_score}/10` : '—';
+  metaBel.textContent = data.believability ? `${data.believability}/10` : '—';
+  metaGrid.style.display = 'grid';
+  if (copyMainBtn) copyMainBtn.style.display = 'inline-flex';
+
+  addToHistory({ blame:data.blame, category:cat, severityEmoji:sevObj.emoji, time:ts });
+}
+
+async function handleRoulette() {
+  const count = rouletteSlider ? rouletteSlider.value : 5;
+  const data = await apiFetch(`/blame/multiple?count=${count}`);
+  const blames = data.blames || data;
+  rouletteResults.innerHTML = '';
+  (Array.isArray(blames) ? blames : []).forEach((item, i) => {
+    const blame = typeof item === 'string' ? item : item.blame;
+    const cat = item.category || '';
+    const sev = typeof item.severity === 'string' ? item.severity : (item.severity?.level || '');
+    const div = document.createElement('div');
+    div.className = 'roulette-item';
+    div.style.animationDelay = `${i*0.08}s`;
+    div.innerHTML = `<div class="ri-num">${i+1}</div><div class="ri-text">${escapeHTML(blame)}<div class="ri-meta">${CATEGORY_META[cat]||''} ${cat.replace(/_/g,' ')} · ${sevEmoji(sev)} ${sev}</div></div><button class="copy-btn ri-copy" title="Copy"><span class="copy-icon">📋</span></button>`;
+    div.querySelector('.ri-copy').addEventListener('click', ev => { ev.stopPropagation(); copyToClipboard(blame, ev.currentTarget); });
+    rouletteResults.appendChild(div);
+    const ts = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+    addToHistory({ blame, category:(cat||'roulette').replace(/_/g,' ').toUpperCase(), severityEmoji:sevEmoji(sev), time:ts }, false);
+  });
+  saveHistory(); renderHistory(); updateCounter();
+}
+
+async function handleAscii() {
+  const data = await apiFetch(`/blame/ascii?style=${selectedAsciiStyle}`);
+  const text = typeof data === 'string' ? data : (data.ascii || data.art || JSON.stringify(data,null,2));
+  asciiArt.textContent = text;
+  if (copyAsciiBtn) copyAsciiBtn.style.display = 'inline-flex';
+}
+
+function sevEmoji(s) { return {minor:'🟢',moderate:'🟡',catastrophic:'🔴'}[s]||'🟠'; }
+
 // ============================================
-// HISTORY RENDERING
+// HISTORY
 // ============================================
+function addToHistory(entry, doRender = true) {
+  history.unshift({ id:Date.now()+Math.random(), ...entry });
+  totalCount++;
+  if (doRender) { saveHistory(); renderHistory(); updateCounter(); }
+}
+
 function renderHistory() {
-  if (history.length === 0) {
-    historyEmpty.style.display = 'block';
-    clearBtn.style.display = 'none';
-    // Remove all items
-    const items = historyList.querySelectorAll('.history-item');
-    items.forEach(item => item.remove());
-    return;
-  }
-
-  historyEmpty.style.display = 'none';
-  clearBtn.style.display = 'inline-flex';
-
-  // Clear existing items
-  const existingItems = historyList.querySelectorAll('.history-item');
-  existingItems.forEach(item => item.remove());
-
-  // Render items (show last 50)
-  const displayItems = history.slice(0, 50);
-  displayItems.forEach((entry, idx) => {
-    const item = createHistoryItem(entry, history.length - idx);
-    item.style.animationDelay = `${idx * 0.05}s`;
-    historyList.appendChild(item);
+  if (!history.length) { historyEmpty.style.display='block'; clearBtn.style.display='none'; historyList.querySelectorAll('.history-item').forEach(i=>i.remove()); return; }
+  historyEmpty.style.display='none'; clearBtn.style.display='inline-flex';
+  historyList.querySelectorAll('.history-item').forEach(i=>i.remove());
+  history.slice(0,50).forEach((e,idx) => {
+    const div = document.createElement('div');
+    div.className='history-item'; div.style.animationDelay=`${idx*.04}s`;
+    div.innerHTML=`<div class="history-number">#${history.length-idx}</div><div class="history-content"><p class="history-reason">${escapeHTML(e.blame)}</p><div class="history-meta"><span>${e.severityEmoji||''} ${escapeHTML(e.category||'')}</span><span class="history-time">${escapeHTML(e.time||'')}</span></div></div><button class="copy-btn history-copy-btn" title="Copy"><span class="copy-icon">📋</span></button>`;
+    div.querySelector('.history-copy-btn').addEventListener('click', ev => { ev.stopPropagation(); copyToClipboard(e.blame, ev.currentTarget); });
+    historyList.appendChild(div);
   });
 }
 
-function createHistoryItem(entry, number) {
-  const div = document.createElement('div');
-  div.className = 'history-item';
-  div.innerHTML = `
-    <div class="history-number">#${number}</div>
-    <div class="history-content">
-      <p class="history-reason">${escapeHTML(entry.blame)}</p>
-      <div class="history-meta">
-        <span>${escapeHTML(entry.severityEmoji)} ${escapeHTML(entry.category)}</span>
-        <span class="history-time">${escapeHTML(entry.time)}</span>
-      </div>
-    </div>
-    <button class="copy-btn history-copy-btn" type="button" title="Copy to clipboard">
-      <span class="copy-icon">📋</span>
-    </button>
-  `;
-
-  // Attach copy handler
-  const copyBtn = div.querySelector('.history-copy-btn');
-  copyBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    copyToClipboard(entry.blame, copyBtn);
-  });
-
-  return div;
-}
-
-// ============================================
-// CLEAR HISTORY
-// ============================================
 function handleClear() {
-  history = [];
-  totalCount = 0;
-  saveHistory();
-  renderHistory();
-  updateCounter();
-
-  // Reset display
-  blameReason.textContent = 'Press the button to seamlessly avoid responsibility.';
-  blameReason.classList.remove('pop-in');
-  metaGrid.style.display = 'none';
+  history=[]; totalCount=0; saveHistory(); renderHistory(); updateCounter();
+  blameReason.textContent='Press the button to seamlessly avoid responsibility.';
+  blameReason.classList.remove('pop-in'); metaGrid.style.display='none';
   blameDisplay.classList.remove('active');
-  copyMainBtn.style.display = 'none';
-
-  showToast('🗑️ All evidence erased. A fresh start!');
+  if(copyMainBtn) copyMainBtn.style.display='none';
+  rouletteResults.innerHTML=''; asciiArt.textContent='';
+  showToast('🗑️ All evidence erased!');
 }
 
-// ============================================
-// HELPERS
-// ============================================
-function updateCounter() {
-  const plural = totalCount === 1 ? 'dodged responsibility' : 'dodged responsibilities';
-  counterText.textContent = `${totalCount} ${plural}`;
-}
-
-function saveHistory() {
-  localStorage.setItem('ihateresponsibility-history', JSON.stringify(history));
-}
-
-function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+function updateCounter() { counterText.textContent=`${totalCount} dodged`; }
+function saveHistory() { localStorage.setItem('ihr-history', JSON.stringify(history)); }
+function escapeHTML(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 async function copyToClipboard(text, btn) {
-  try {
-    await navigator.clipboard.writeText(text);
-
-    // Visual feedback
-    const iconEl = btn.querySelector('.copy-icon');
-    const labelEl = btn.querySelector('.copy-label');
-    const origIcon = iconEl.textContent;
-    const origLabel = labelEl ? labelEl.textContent : null;
-
-    iconEl.textContent = '✅';
-    if (labelEl) labelEl.textContent = 'Copied!';
-    btn.classList.add('copied');
-
-    showToast('📋 Copied excuse to clipboard!');
-
-    setTimeout(() => {
-      iconEl.textContent = origIcon;
-      if (labelEl) labelEl.textContent = origLabel;
-      btn.classList.remove('copied');
-    }, 1500);
-  } catch (err) {
-    // Fallback for older browsers
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    showToast('📋 Copied excuse to clipboard!');
-  }
+  try { await navigator.clipboard.writeText(text); } catch(_) { const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  const ic=btn.querySelector('.copy-icon'), lb=btn.querySelector('.copy-label');
+  const oi=ic?.textContent, ol=lb?.textContent;
+  if(ic) ic.textContent='✅'; if(lb) lb.textContent='Copied!';
+  btn.classList.add('copied'); showToast('📋 Copied!');
+  setTimeout(()=>{ if(ic) ic.textContent=oi; if(lb) lb.textContent=ol; btn.classList.remove('copied'); },1500);
 }
 
 // ============================================
 // VISUAL EFFECTS
 // ============================================
 function createRipple(e) {
-  const btn = bigBlameBtn;
-  const ripple = document.getElementById('btn-ripple');
-  const rect = btn.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height);
-  const x = e.clientX - rect.left - size / 2;
-  const y = e.clientY - rect.top - size / 2;
-
-  ripple.style.width = ripple.style.height = `${size}px`;
-  ripple.style.left = `${x}px`;
-  ripple.style.top = `${y}px`;
-  ripple.classList.remove('animate');
-  void ripple.offsetWidth;
-  ripple.classList.add('animate');
-
-  setTimeout(() => ripple.classList.remove('animate'), 600);
+  const rip=document.getElementById('btn-ripple'), rect=bigBtn.getBoundingClientRect();
+  const sz=Math.max(rect.width,rect.height);
+  rip.style.width=rip.style.height=sz+'px';
+  rip.style.left=(e.clientX-rect.left-sz/2)+'px';
+  rip.style.top=(e.clientY-rect.top-sz/2)+'px';
+  rip.classList.remove('animate'); void rip.offsetWidth; rip.classList.add('animate');
+  setTimeout(()=>rip.classList.remove('animate'),600);
 }
 
 function createEmojiBurst() {
-  const emojis = ['🏃💨', '🤷‍♂️', '🤫', '👀', '🙉', '🤡', '📉', '🔥', '🕳️'];
-  const btn = bigBlameBtn.getBoundingClientRect();
-  const centerX = btn.left + btn.width / 2;
-  const centerY = btn.top + btn.height / 2;
-
-  for (let i = 0; i < 8; i++) {
-    const span = document.createElement('span');
-    span.className = 'emoji-burst';
-    span.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-
-    const angle = (Math.PI * 2 / 8) * i + (Math.random() - 0.5);
-    const distance = 80 + Math.random() * 120;
-    const tx = Math.cos(angle) * distance;
-    const ty = Math.sin(angle) * distance - 60;
-    const rot = (Math.random() - 0.5) * 720;
-
-    span.style.left = `${centerX}px`;
-    span.style.top = `${centerY}px`;
-    span.style.setProperty('--tx', `${tx}px`);
-    span.style.setProperty('--ty', `${ty}px`);
-    span.style.setProperty('--rot', `${rot}deg`);
-
-    document.body.appendChild(span);
-    setTimeout(() => span.remove(), 1000);
+  const emojis=['🏃💨','🤷','🤫','👀','🙉','🤡','📉','🔥','🕳️'];
+  const rect=bigBtn.getBoundingClientRect(), cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  for(let i=0;i<8;i++){
+    const s=document.createElement('span'); s.className='emoji-burst';
+    s.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    const a=(Math.PI*2/8)*i+(Math.random()-.5), d=80+Math.random()*120;
+    s.style.left=cx+'px'; s.style.top=cy+'px';
+    s.style.setProperty('--tx',Math.cos(a)*d+'px');
+    s.style.setProperty('--ty',(Math.sin(a)*d-60)+'px');
+    s.style.setProperty('--rot',(Math.random()-.5)*720+'deg');
+    document.body.appendChild(s); setTimeout(()=>s.remove(),1000);
   }
 }
 
 function createParticles() {
-  const container = document.getElementById('bg-particles');
-  const colors = ['rgba(59,130,246,0.3)', 'rgba(96,165,250,0.2)', 'rgba(147,197,253,0.15)'];
-
-  for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle';
-    const size = 2 + Math.random() * 4;
-    particle.style.width = `${size}px`;
-    particle.style.height = `${size}px`;
-    particle.style.left = `${Math.random() * 100}%`;
-    particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-    particle.style.animationDuration = `${8 + Math.random() * 15}s`;
-    particle.style.animationDelay = `${Math.random() * 10}s`;
-    container.appendChild(particle);
+  const c=document.getElementById('bg-particles');
+  const cols=['rgba(59,130,246,.3)','rgba(96,165,250,.2)','rgba(147,197,253,.15)'];
+  for(let i=0;i<30;i++){
+    const p=document.createElement('div'); p.className='particle';
+    const sz=2+Math.random()*4;
+    p.style.width=sz+'px'; p.style.height=sz+'px';
+    p.style.left=Math.random()*100+'%';
+    p.style.background=cols[Math.floor(Math.random()*cols.length)];
+    p.style.animationDuration=(8+Math.random()*15)+'s';
+    p.style.animationDelay=(Math.random()*10)+'s';
+    c.appendChild(p);
   }
 }
 
-// ============================================
-// TOAST NOTIFICATION
-// ============================================
-function showToast(message) {
-  // Remove existing toast
-  const existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = message;
-  document.body.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    toast.classList.add('visible');
-  });
-
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 400);
-  }, 2500);
+function showToast(msg) {
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('visible'));
+  setTimeout(()=>{ t.classList.remove('visible'); setTimeout(()=>t.remove(),400); },2500);
 }
 
-// ============================================
-// KEYBOARD SHORTCUT
-// ============================================
-document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && !e.target.matches('input, textarea, button')) {
-    e.preventDefault();
-    bigBlameBtn.click();
-  }
-});
+// Keyboard shortcut
+document.addEventListener('keydown', e => { if(e.code==='Space'&&!e.target.matches('input,textarea,button')){e.preventDefault();bigBtn.click();} });
 
 // ============================================
-// COOKIE CONSENT
+// CONSENT
 // ============================================
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? match[2] : null;
-}
-
-function setCookie(name, value, days) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
 function initConsent() {
-  const banner = document.getElementById('consent-banner');
-  const acceptBtn = document.getElementById('consent-accept');
-  const declineBtn = document.getElementById('consent-decline');
-
-  if (!banner) return;
-
-  const consent = getCookie('ihateresponsibility-consent');
-
-  if (consent) {
-    // Already consented or declined — hide banner
-    banner.style.display = 'none';
-    return;
-  }
-
-  // Show banner after a short delay
-  setTimeout(() => {
-    banner.classList.add('visible');
-  }, 1500);
-
-  acceptBtn.addEventListener('click', () => {
-    setCookie('ihateresponsibility-consent', 'accepted', 365);
-    banner.classList.remove('visible');
-    banner.classList.add('hidden');
-    showToast('👍 Cool! Your history is saved locally.');
-  });
-
-  declineBtn.addEventListener('click', () => {
-    setCookie('ihateresponsibility-consent', 'declined', 365);
-    banner.classList.remove('visible');
-    banner.classList.add('hidden');
-    // Clear any existing localStorage data
-    localStorage.removeItem('ihateresponsibility-history');
-    history = [];
-    totalCount = 0;
-    renderHistory();
-    updateCounter();
-    showToast('🤷 No worries. Evidence won\'t be saved.');
-  });
+  const banner=document.getElementById('consent-banner'), acc=document.getElementById('consent-accept'), dec=document.getElementById('consent-decline');
+  if(!banner) return;
+  const ck=document.cookie.match(/(^| )ihr-consent=([^;]+)/);
+  if(ck){ banner.style.display='none'; return; }
+  setTimeout(()=>banner.classList.add('visible'),1500);
+  acc.addEventListener('click',()=>{ document.cookie=`ihr-consent=y;expires=${new Date(Date.now()+365*864e5).toUTCString()};path=/;SameSite=Lax`; banner.classList.remove('visible'); banner.classList.add('hidden'); showToast('👍 History saved locally.'); });
+  dec.addEventListener('click',()=>{ document.cookie=`ihr-consent=n;expires=${new Date(Date.now()+365*864e5).toUTCString()};path=/;SameSite=Lax`; banner.classList.remove('visible'); banner.classList.add('hidden'); localStorage.removeItem('ihr-history'); history=[]; totalCount=0; renderHistory(); updateCounter(); showToast('🤷 No worries.'); });
 }
 
-// ============================================
-// START
-// ============================================
 init();
 initConsent();
