@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>I Hate Responsibility — Professional Blame Generator</title>
+  <meta name="description" content="Generate hilarious, professional excuses to avoid responsibility with the click of a button. Powered by Blame-as-a-Service.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+  <!-- Animated background particles -->
+  <div class="bg-particles" id="bg-particles"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="logo-group">
+        <span class="logo-icon">🤷</span>
+        <h1 class="logo-text">I Hate <span class="accent">Responsibility</span></h1>
+      </div>
+      <p class="tagline">The world's most sophisticated excuse generator.</p>
+      <div class="counter-badge" id="counter-badge">
+        <span class="counter-dot"></span>
+        <span id="counter-text">0 dodged responsibilities</span>
+      </div>
+    </header>
+
+    <!-- Main CTA Section -->
+    <section class="cta-section" id="cta-section">
+      <!-- Current Blame display -->
+      <div class="blame-display" id="blame-display">
+        <div class="blame-display-inner" id="blame-display-inner">
+          <p class="blame-label">YOUR LATEST EXCUSE</p>
+          <p class="blame-reason" id="blame-reason">Press the button to seamlessly avoid responsibility.</p>
+          
+          <div class="blame-meta-grid" id="blame-meta-grid" style="display: none;">
+            <div class="meta-item">
+              <span class="meta-title">CATEGORY</span>
+              <span class="meta-value" id="meta-category">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">SEVERITY</span>
+              <span class="meta-value" id="meta-severity">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">QUALITY</span>
+              <span class="meta-value" id="meta-quality">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">BELIEVABILITY</span>
+              <span class="meta-value" id="meta-believability">-</span>
+            </div>
+          </div>
+
+          <button class="copy-btn copy-btn-main" id="copy-main-btn" type="button" style="display:none;" title="Copy to clipboard">
+            <span class="copy-icon">📋</span>
+            <span class="copy-label">Copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- The Big Button -->
+      <button class="big-blame-btn" id="big-blame-btn" type="button">
+        <span class="btn-emoji">🏃💨</span>
+        <span class="btn-text">IT WASN'T ME</span>
+        <span class="btn-subtitle">generate excuse</span>
+        <div class="btn-ripple" id="btn-ripple"></div>
+      </button>
+
+      <p class="powered-by">Powered by <a href="https://github.com/sbmagar13/blame-as-a-service" target="_blank" rel="noopener">Blame-as-a-Service</a></p>
+    </section>
+
+    <!-- History Section -->
+    <section class="history-section" id="history-section">
+      <div class="history-header">
+        <h2 class="history-title">📜 Hall of Excuses</h2>
+        <button class="clear-btn" id="clear-btn" type="button" style="display:none;">Clear All</button>
+      </div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty" id="history-empty">
+          <span class="empty-icon">😇</span>
+          <p>You haven't dodged anything yet... suspicious.</p>
+          <p class="empty-sub">Hit the button above to start shifting the blame.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer" id="site-footer">
+      <p>🤷 I Hate Responsibility — Open source, privacy-first, blame-forward.</p>
+      <div class="visitor-badge">
+        <img src="https://api.visitorbadge.io/api/visitors?path=srg-sphynx.github.io%2FI-hate-responsibility&label=VISITORS&labelColor=%230f172a&countColor=%233b82f6" alt="Visitor Count" id="visitor-badge-img" />
+      </div>
+      <div class="footer-links">
+        <a href="privacy.html">Privacy Policy</a>
+        <span class="footer-sep">·</span>
+        <a href="https://github.com/srg-sphynx/I-hate-responsibility" target="_blank" rel="noopener">GitHub</a>
+        <span class="footer-sep">·</span>
+        <a href="https://github.com/sbmagar13/blame-as-a-service" target="_blank" rel="noopener">BaaS API</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Cookie Consent Banner -->
+  <div class="consent-banner" id="consent-banner">
+    <div class="consent-inner">
+      <div class="consent-text">
+        <span class="consent-icon">🍪</span>
+        <div>
+          <p class="consent-title">Quick heads up!</p>
+          <p class="consent-desc">We use <strong>localStorage</strong> to save your excuse history on your device. No tracking, no ads, no accountability. <a href="privacy.html">Privacy Policy</a></p>
+        </div>
+      </div>
+      <div class="consent-actions">
+        <button class="consent-btn consent-accept" id="consent-accept" type="button">Got it 👍</button>
+        <button class="consent-btn consent-decline" id="consent-decline" type="button">Nah</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>
