@@ -2,7 +2,16 @@
 // I Hate Responsibility — App Logic
 // ============================================
 
-const API_URL = 'https://baas.budhathokisagar.com.np/blame/rich';
+const API_BASE = 'https://baas.budhathokisagar.com.np';
+const API_PATH_RICH = '/blame/rich';
+const API_PATH_SIMPLE = '/blame';
+
+// CORS proxy strategies (tried in order)
+const CORS_STRATEGIES = [
+  (url) => url,                                                    // Direct (no proxy)
+  (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,     // corsproxy.io
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, // allorigins
+];
 
 // DOM Elements
 const bigBlameBtn = document.getElementById('big-blame-btn');
@@ -24,6 +33,7 @@ const copyMainBtn = document.getElementById('copy-main-btn');
 let history = [];
 let totalCount = 0;
 let isLoading = false;
+let workingStrategyIdx = 0; // Cache whichever proxy strategy works
 
 // ============================================
 // INITIALIZATION
@@ -61,13 +71,48 @@ function init() {
 }
 
 // ============================================
-// API CALL
+// API CALL (with CORS proxy fallback)
 // ============================================
 async function fetchBlame() {
-  const response = await fetch(API_URL);
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  const data = await response.json();
-  return data;
+  // Try the rich endpoint first, then fall back to simple
+  const endpoints = [
+    API_BASE + API_PATH_RICH,
+    API_BASE + API_PATH_SIMPLE,
+  ];
+
+  // Start from whichever strategy worked last time
+  for (let attempt = 0; attempt < CORS_STRATEGIES.length; attempt++) {
+    const stratIdx = (workingStrategyIdx + attempt) % CORS_STRATEGIES.length;
+    const strategy = CORS_STRATEGIES[stratIdx];
+
+    for (const endpoint of endpoints) {
+      try {
+        const url = strategy(endpoint);
+        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) continue;
+        const data = await response.json();
+        if (data.blame) {
+          workingStrategyIdx = stratIdx; // Remember what worked
+          // Normalize: simple endpoint has string severity, rich has object
+          if (typeof data.severity === 'string') {
+            data.severity = { level: data.severity, emoji: severityEmoji(data.severity), name: data.severity.toUpperCase() };
+            data.quality_score = data.quality_score || Math.floor(Math.random() * 4) + 6;
+            data.believability = data.believability || Math.floor(Math.random() * 5) + 5;
+          }
+          return data;
+        }
+      } catch (_) {
+        // Try next strategy
+      }
+    }
+  }
+
+  throw new Error('All API strategies failed');
+}
+
+function severityEmoji(level) {
+  const map = { minor: '🟢', moderate: '🟡', catastrophic: '🔴' };
+  return map[level] || '🟠';
 }
 
 // ============================================
