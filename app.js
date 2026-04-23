@@ -116,10 +116,18 @@ function switchMode(mode) {
 // API FETCH (with CORS proxy fallback)
 // ============================================
 async function apiFetch(path) {
+  // Add cache-busting param so CORS proxies don't serve stale results
+  const sep = path.includes('?') ? '&' : '?';
+  const fullUrl = API_BASE + path + sep + '_t=' + Date.now();
+
   // Try direct first, then proxy
   for (const urlFn of [u => u, PROXY]) {
     try {
-      const r = await fetch(urlFn(API_BASE + path), { signal: AbortSignal.timeout(8000) });
+      const r = await fetch(urlFn(fullUrl), {
+        signal: AbortSignal.timeout(8000),
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       if (r.ok) { const ct = r.headers.get('content-type') || ''; return ct.includes('json') ? await r.json() : await r.text(); }
     } catch(_) {}
   }
