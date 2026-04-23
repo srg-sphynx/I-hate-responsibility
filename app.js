@@ -193,17 +193,21 @@ async function handleRoulette() {
   const blames = data.blames || data;
   rouletteResults.innerHTML = '';
   (Array.isArray(blames) ? blames : []).forEach((item, i) => {
-    const blame = typeof item === 'string' ? item : item.blame;
-    const cat = item.category || '';
-    const sev = typeof item.severity === 'string' ? item.severity : (item.severity?.level || '');
+    const isStr = typeof item === 'string';
+    const blame = isStr ? item : item.blame;
+    const cat = isStr ? '' : (item.category || '');
+    const sev = isStr ? '' : (typeof item.severity === 'string' ? item.severity : (item.severity?.level || ''));
+    const catDisplay = cat ? `${CATEGORY_META[cat]||'❓'} ${cat.replace(/_/g,' ')}` : '';
+    const sevDisplay = sev ? `${sevEmoji(sev)} ${sev}` : '';
+    const metaParts = [catDisplay, sevDisplay].filter(Boolean).join(' · ');
     const div = document.createElement('div');
     div.className = 'roulette-item';
     div.style.animationDelay = `${i*0.08}s`;
-    div.innerHTML = `<div class="ri-num">${i+1}</div><div class="ri-text">${escapeHTML(blame)}<div class="ri-meta">${CATEGORY_META[cat]||''} ${cat.replace(/_/g,' ')} · ${sevEmoji(sev)} ${sev}</div></div><button class="copy-btn ri-copy" title="Copy"><span class="copy-icon">📋</span></button>`;
+    div.innerHTML = `<div class="ri-num">${i+1}</div><div class="ri-text">${escapeHTML(blame)}${metaParts ? `<div class="ri-meta">${metaParts}</div>` : ''}</div><button class="copy-btn ri-copy" type="button" title="Copy"><span class="copy-icon">📋</span></button>`;
     div.querySelector('.ri-copy').addEventListener('click', ev => { ev.stopPropagation(); copyToClipboard(blame, ev.currentTarget); });
     rouletteResults.appendChild(div);
     const ts = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
-    addToHistory({ blame, category:(cat||'roulette').replace(/_/g,' ').toUpperCase(), severityEmoji:sevEmoji(sev), time:ts }, false);
+    addToHistory({ blame, category:(cat||'roulette').replace(/_/g,' ').toUpperCase(), severityEmoji:sev ? sevEmoji(sev) : '🎰', time:ts }, false);
   });
   saveHistory(); renderHistory(); updateCounter();
 }
@@ -249,7 +253,7 @@ function handleClear() {
   showToast('🗑️ All evidence erased!');
 }
 
-function updateCounter() { counterText.textContent=`${totalCount} dodged`; }
+function updateCounter() { counterText.textContent=`${totalCount} ${totalCount === 1 ? 'responsibility' : 'responsibilities'} dodged`; }
 function saveHistory() { localStorage.setItem('ihr-history', JSON.stringify(history)); }
 function escapeHTML(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
